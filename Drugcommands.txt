@@ -1,0 +1,348 @@
+/////Open a command terminal with in Automobile-network folder, let's call this terminal as host terminal
+
+cd Automobile-network/
+
+############## host terminal ##############
+
+------------Register the ca admin for each organization—----------------
+
+//Build the docker-compose-ca.yaml in the docker folder
+
+docker-compose -f docker/docker-compose-ca.yaml up -d
+
+sudo chmod -R 777 organizations/
+
+------------Register and enroll the users for each organization—-----------
+
+//Build the registerEnroll.sh script file
+
+chmod +x registerEnroll.sh
+
+./registerEnroll.sh
+
+—-------------Build the infrastructure—-----------------
+
+//Build the docker-compose-3org.yaml in the docker folder
+
+docker-compose -f docker/docker-compose-3org.yaml up -d
+
+-------------Generate the genesis block—-------------------------------
+
+//Build the configtx.yaml file in the config folder
+
+export FABRIC_CFG_PATH=./config
+
+export CHANNEL_NAME=drugchannel
+
+configtxgen -profile ThreeOrgsChannel -outputBlock ./channel-artifacts/${CHANNEL_NAME}.block -channelID $CHANNEL_NAME
+
+------ Create the application channel------
+
+export ORDERER_CA=./organizations/ordererOrganizations/drug.com/orderers/orderer.drug.com/msp/tlscacerts/tlsca.drug.com-cert.pem
+
+export ORDERER_ADMIN_TLS_SIGN_CERT=./organizations/ordererOrganizations/drug.com/orderers/orderer.drug.com/tls/server.crt
+
+export ORDERER_ADMIN_TLS_PRIVATE_KEY=./organizations/ordererOrganizations/drug.com/orderers/orderer.drug.com/tls/server.key
+
+osnadmin channel join --channelID $CHANNEL_NAME --config-block ./channel-artifacts/$CHANNEL_NAME.block -o localhost:7053 --ca-file $ORDERER_CA --client-cert $ORDERER_ADMIN_TLS_SIGN_CERT --client-key $ORDERER_ADMIN_TLS_PRIVATE_KEY
+
+osnadmin channel list -o localhost:7053 --ca-file $ORDERER_CA --client-cert $ORDERER_ADMIN_TLS_SIGN_CERT --client-key $ORDERER_ADMIN_TLS_PRIVATE_KEY
+
+/////Open another terminal with in Automobile-network folder, let's call this terminal as peer0_Manufacturer terminal.
+
+############## peer0_Manufacturer terminal ##############
+
+// Build the core.yaml in peercfg folder
+
+
+export FABRIC_CFG_PATH=./peercfg
+export CHANNEL_NAME=drugchannel
+export CORE_PEER_LOCALMSPID=ManufacturerMSP
+export CORE_PEER_TLS_ENABLED=true
+export CORE_PEER_TLS_ROOTCERT_FILE=${PWD}/organizations/peerOrganizations/manufacturer.drug.com/peers/peer0.manufacturer.drug.com/tls/ca.crt
+export CORE_PEER_MSPCONFIGPATH=${PWD}/organizations/peerOrganizations/manufacturer.drug.com/users/Admin@manufacturer.drug.com/msp
+export CORE_PEER_ADDRESS=localhost:7051
+export ORDERER_CA=${PWD}/organizations/ordererOrganizations/drug.com/orderers/orderer.drug.com/msp/tlscacerts/tlsca.drug.com-cert.pem
+export ORG1_PEER_TLSROOTCERT=${PWD}/organizations/peerOrganizations/manufacturer.drug.com/peers/peer0.manufacturer.drug.com/tls/ca.crt
+export ORG2_PEER_TLSROOTCERT=${PWD}/organizations/peerOrganizations/distributor.drug.com/peers/peer0.distributor.drug.com/tls/ca.crt
+export ORG3_PEER_TLSROOTCERT=${PWD}/organizations/peerOrganizations/pharmacist.drug.com/peers/peer0.pharmacist.drug.com/tls/ca.crt
+
+
+
+—---------------Join peer to the channel—-------------
+
+peer channel join -b ./channel-artifacts/$CHANNEL_NAME.block
+
+peer channel list
+
+/////Open another terminal with in Automobile-network folder, let's call this terminal as peer0_Distributor terminal.
+
+############## peer0_Distributor terminal ##############
+
+export FABRIC_CFG_PATH=./peercfg
+export CHANNEL_NAME=drugchannel 
+export CORE_PEER_LOCALMSPID=DistributorMSP 
+export CORE_PEER_TLS_ENABLED=true
+export CORE_PEER_ADDRESS=localhost:9051 
+export CORE_PEER_TLS_ROOTCERT_FILE=${PWD}/organizations/peerOrganizations/distributor.drug.com/peers/peer0.distributor.drug.com/tls/ca.crt
+export CORE_PEER_MSPCONFIGPATH=${PWD}/organizations/peerOrganizations/distributor.drug.com/users/Admin@distributor.drug.com/msp
+export ORDERER_CA=${PWD}/organizations/ordererOrganizations/drug.com/orderers/orderer.drug.com/msp/tlscacerts/tlsca.drug.com-cert.pem
+export ORG1_PEER_TLSROOTCERT=${PWD}/organizations/peerOrganizations/manufacturer.drug.com/peers/peer0.manufacturer.drug.com/tls/ca.crt
+export ORG2_PEER_TLSROOTCERT=${PWD}/organizations/peerOrganizations/distributor.drug.com/peers/peer0.distributor.drug.com/tls/ca.crt
+export ORG3_PEER_TLSROOTCERT=${PWD}/organizations/peerOrganizations/pharmacist.drug.com/peers/peer0.pharmacist.drug.com/tls/ca.crt
+
+—---------------Join peer to the channel—-------------
+
+peer channel join -b ./channel-artifacts/$CHANNEL_NAME.block
+
+peer channel list
+
+/////Open another terminal with in Automobile-network folder, let's call this terminal as peer0_Pharmacist terminal.
+
+############## peer0_Pharmacist terminal ##############
+
+export FABRIC_CFG_PATH=./peercfg
+export CHANNEL_NAME=drugchannel 
+export CORE_PEER_LOCALMSPID=PharmacistMSP 
+export CORE_PEER_TLS_ENABLED=true
+export CORE_PEER_ADDRESS=localhost:11051 
+export CORE_PEER_TLS_ROOTCERT_FILE=${PWD}/organizations/peerOrganizations/pharmacist.drug.com/peers/peer0.pharmacist.drug.com/tls/ca.crt
+export CORE_PEER_MSPCONFIGPATH=${PWD}/organizations/peerOrganizations/pharmacist.drug.com/users/Admin@pharmacist.drug.com/msp
+export ORDERER_CA=${PWD}/organizations/ordererOrganizations/drug.com/orderers/orderer.drug.com/msp/tlscacerts/tlsca.drug.com-cert.pem
+export ORG1_PEER_TLSROOTCERT=${PWD}/organizations/peerOrganizations/manufacturer.drug.com/peers/peer0.manufacturer.drug.com/tls/ca.crt
+export ORG2_PEER_TLSROOTCERT=${PWD}/organizations/peerOrganizations/distributor.drug.com/peers/peer0.distributor.drug.com/tls/ca.crt
+export ORG3_PEER_TLSROOTCERT=${PWD}/organizations/peerOrganizations/pharmacist.drug.com/peers/peer0.pharmacist.drug.com/tls/ca.crt
+
+—---------------Join peer to the channel—-------------
+
+peer channel join -b ./channel-artifacts/$CHANNEL_NAME.block
+
+peer channel list
+
+—-------------anchor peer update—-----------
+
+############## peer0_Manufacturer terminal ##############
+
+peer channel fetch config channel-artifacts/config_block.pb -o localhost:7050 --ordererTLSHostnameOverride orderer.drug.com -c $CHANNEL_NAME --tls --cafile $ORDERER_CA
+
+cd channel-artifacts
+
+configtxlator proto_decode --input config_block.pb --type common.Block --output config_block.json
+jq '.data.data[0].payload.data.config' config_block.json > config.json
+
+cp config.json config_copy.json
+
+jq '.channel_group.groups.Application.groups.ManufacturerMSP.values += {"AnchorPeers":{"mod_policy": "Admins","value":{"anchor_peers": [{"host": "peer0.manufacturer.drug.com","port": 7051}]},"version": "0"}}' config_copy.json > modified_config.json
+
+configtxlator proto_encode --input config.json --type common.Config --output config.pb
+configtxlator proto_encode --input modified_config.json --type common.Config --output modified_config.pb
+configtxlator compute_update --channel_id ${CHANNEL_NAME} --original config.pb --updated modified_config.pb --output config_update.pb
+
+configtxlator proto_decode --input config_update.pb --type common.ConfigUpdate --output config_update.json
+echo '{"payload":{"header":{"channel_header":{"channel_id":"'$CHANNEL_NAME'", "type":2}},"data":{"config_update":'$(cat config_update.json)'}}}' | jq . > config_update_in_envelope.json
+configtxlator proto_encode --input config_update_in_envelope.json --type common.Envelope --output config_update_in_envelope.pb
+
+cd ..
+
+peer channel update -f channel-artifacts/config_update_in_envelope.pb -c $CHANNEL_NAME -o localhost:7050  --ordererTLSHostnameOverride orderer.drug.com --tls --cafile $ORDERER_CA
+
+############## peer0_Distributor terminal ##############
+
+peer channel fetch config channel-artifacts/config_block.pb -o localhost:7050 --ordererTLSHostnameOverride orderer.drug.com -c $CHANNEL_NAME --tls --cafile $ORDERER_CA
+
+cd channel-artifacts
+
+configtxlator proto_decode --input config_block.pb --type common.Block --output config_block.json
+jq '.data.data[0].payload.data.config' config_block.json > config.json
+cp config.json config_copy.json
+
+jq '.channel_group.groups.Application.groups.DistributorMSP.values += {"AnchorPeers":{"mod_policy": "Admins","value":{"anchor_peers": [{"host": "peer0.distributor.drug.com","port": 9051}]},"version": "0"}}' config_copy.json > modified_config.json
+
+configtxlator proto_encode --input config.json --type common.Config --output config.pb
+configtxlator proto_encode --input modified_config.json --type common.Config --output modified_config.pb
+configtxlator compute_update --channel_id $CHANNEL_NAME --original config.pb --updated modified_config.pb --output config_update.pb
+
+configtxlator proto_decode --input config_update.pb --type common.ConfigUpdate --output config_update.json
+echo '{"payload":{"header":{"channel_header":{"channel_id":"'$CHANNEL_NAME'", "type":2}},"data":{"config_update":'$(cat config_update.json)'}}}' | jq . > config_update_in_envelope.json
+configtxlator proto_encode --input config_update_in_envelope.json --type common.Envelope --output config_update_in_envelope.pb
+
+cd ..
+
+peer channel update -f channel-artifacts/config_update_in_envelope.pb -c $CHANNEL_NAME -o localhost:7050  --ordererTLSHostnameOverride orderer.drug.com --tls --cafile $ORDERER_CA
+
+############## peer0_Pharmacist terminal ##############
+
+peer channel fetch config channel-artifacts/config_block.pb -o localhost:7050 --ordererTLSHostnameOverride orderer.drug.com -c $CHANNEL_NAME --tls --cafile $ORDERER_CA
+
+cd channel-artifacts
+
+configtxlator proto_decode --input config_block.pb --type common.Block --output config_block.json
+jq '.data.data[0].payload.data.config' config_block.json > config.json
+cp config.json config_copy.json
+
+jq '.channel_group.groups.Application.groups.PharmacistMSP.values += {"AnchorPeers":{"mod_policy": "Admins","value":{"anchor_peers": [{"host": "peer0.pharmacist.drug.com","port": 11051}]},"version": "0"}}' config_copy.json > modified_config.json
+
+configtxlator proto_encode --input config.json --type common.Config --output config.pb
+configtxlator proto_encode --input modified_config.json --type common.Config --output modified_config.pb
+configtxlator compute_update --channel_id $CHANNEL_NAME --original config.pb --updated modified_config.pb --output config_update.pb
+
+configtxlator proto_decode --input config_update.pb --type common.ConfigUpdate --output config_update.json
+echo '{"payload":{"header":{"channel_header":{"channel_id":"'$CHANNEL_NAME'", "type":2}},"data":{"config_update":'$(cat config_update.json)'}}}' | jq . > config_update_in_envelope.json
+configtxlator proto_encode --input config_update_in_envelope.json --type common.Envelope --output config_update_in_envelope.pb
+
+cd ..
+
+peer channel update -f channel-artifacts/config_update_in_envelope.pb -c $CHANNEL_NAME -o localhost:7050  --ordererTLSHostnameOverride orderer.drug.com --tls --cafile $ORDERER_CA
+
+peer channel getinfo -c $CHANNEL_NAME
+
+—-----------------Chaincode lifecycle—-------------------
+
+//Build the chaincode (Change MSPId and collection file)
+
+/// Make sure that drugchannel chaincode is available in Chaincode folder which is in the same location of Automobile-network. 
+
+############## peer0_Manufacturer terminal ##############
+
+peer lifecycle chaincode package kbadrug.tar.gz --path ../Chaincode/ --lang golang --label kbadrug_1.0
+
+peer lifecycle chaincode install kbadrug.tar.gz
+
+peer lifecycle chaincode queryinstalled
+
+export CC_PACKAGE_ID=$(peer lifecycle chaincode calculatepackageid kbadrug.tar.gz)
+
+############## peer0_Distributor terminal ##############
+
+peer lifecycle chaincode install kbadrug.tar.gz
+
+export CC_PACKAGE_ID=$(peer lifecycle chaincode calculatepackageid kbadrug.tar.gz)
+
+
+############## peer0_Pharmacist terminal ##############
+
+peer lifecycle chaincode install kbadrug.tar.gz
+
+export CC_PACKAGE_ID=$(peer lifecycle chaincode calculatepackageid kbadrug.tar.gz)
+
+############## peer0_Manufacturer terminal ##############
+
+
+peer lifecycle chaincode approveformyorg -o localhost:7050 --ordererTLSHostnameOverride orderer.drug.com --channelID $CHANNEL_NAME --name drugchannel --version 1.0 --collections-config ../Chaincode/collection-drugnetwork.json --package-id $CC_PACKAGE_ID --sequence 1 --tls --cafile $ORDERER_CA --waitForEvent
+
+############## peer0_Distributor terminal ##############
+
+peer lifecycle chaincode approveformyorg -o localhost:7050 --ordererTLSHostnameOverride orderer.drug.com --channelID $CHANNEL_NAME --name drugchannel --version 1.0 --collections-config ../Chaincode/collection-drugnetwork.json --package-id $CC_PACKAGE_ID --sequence 1 --tls --cafile $ORDERER_CA --waitForEvent
+
+############## peer0_Pharmacist terminal ##############
+
+peer lifecycle chaincode approveformyorg -o localhost:7050 --ordererTLSHostnameOverride orderer.drug.com --channelID $CHANNEL_NAME --name drugchannel --version 1.0 --collections-config ../Chaincode/collection-drugnetwork.json --package-id $CC_PACKAGE_ID --sequence 1 --tls --cafile $ORDERER_CA --waitForEvent
+
+############## peer0_Manufacturer terminal ##############
+
+
+peer lifecycle chaincode checkcommitreadiness --channelID $CHANNEL_NAME --name drugchannel --version 1.0 --sequence 1 --collections-config ../Chaincode/collection-drugnetwork.json --tls --cafile $ORDERER_CA --output json
+
+peer lifecycle chaincode commit -o localhost:7050 --ordererTLSHostnameOverride orderer.drug.com --channelID $CHANNEL_NAME --name drugchannel --version 1.0 --sequence 1 --collections-config ../Chaincode/collection-drugnetwork.json --tls --cafile $ORDERER_CA --peerAddresses localhost:7051 --tlsRootCertFiles $ORG1_PEER_TLSROOTCERT --peerAddresses localhost:9051 --tlsRootCertFiles $ORG2_PEER_TLSROOTCERT --peerAddresses localhost:11051 --tlsRootCertFiles $ORG3_PEER_TLSROOTCERT
+
+peer lifecycle chaincode querycommitted --channelID $CHANNEL_NAME --name drugchannel --cafile $ORDERER_CA
+
+peer chaincode invoke -o localhost:7050 --ordererTLSHostnameOverride orderer.drug.com --tls --cafile $ORDERER_CA -C $CHANNEL_NAME -n drugchannel --peerAddresses localhost:7051 --tlsRootCertFiles $ORG1_PEER_TLSROOTCERT --peerAddresses localhost:9051 --tlsRootCertFiles $ORG2_PEER_TLSROOTCERT --peerAddresses localhost:11051 --tlsRootCertFiles $ORG3_PEER_TLSROOTCERT -c '{"function":"CreateDrug","Args":["Drug-11", "Tata", "Nexon", "White", "Factory-1", "22/07/2023"]}'
+
+peer chaincode invoke -o localhost:7050 --ordererTLSHostnameOverride orderer.drug.com --tls --cafile $ORDERER_CA -C $CHANNEL_NAME -n drugchannel --peerAddresses localhost:7051 --tlsRootCertFiles $ORG1_PEER_TLSROOTCERT --peerAddresses localhost:9051 --tlsRootCertFiles $ORG2_PEER_TLSROOTCERT --peerAddresses localhost:11051 --tlsRootCertFiles $ORG3_PEER_TLSROOTCERT -c '{"function":"CreateDrug","Args":["Drug-12", "Cipla", "21112027", "Andial", "Factory-1", "22/07/2023"]}'
+
+peer chaincode invoke -o localhost:7050 --ordererTLSHostnameOverride orderer.drug.com --tls --cafile $ORDERER_CA -C $CHANNEL_NAME -n drugchannel --peerAddresses localhost:7051 --tlsRootCertFiles $ORG1_PEER_TLSROOTCERT --peerAddresses localhost:9051 --tlsRootCertFiles $ORG2_PEER_TLSROOTCERT --peerAddresses localhost:11051 --tlsRootCertFiles $ORG3_PEER_TLSROOTCERT -c '{"function":"CreateDrug","Args":["Drug-12", "Cipla", "21112027", "Peracitmal", "Factory-1", "22/07/2023"]}'
+
+
+CreateDrug(ctx contractapi.TransactionContextInterface, drugID string, make string, dateofexpiry string, drugname string, manufacturerName string, dateOfManufacture string) (string, error) {
+
+
+
+peer chaincode query -C $CHANNEL_NAME -n drugchannel -c '{"Args":["GetAllDrugs"]}'
+
+
+--------Invoke Private Transaction----------
+
+############## peer0_Distributor terminal ##############
+
+export ASSETTYPE=$(echo -n "drug" | base64 | tr -d \\n)
+export DRUGNAME=$(echo -n "Adial" | base64 | tr -d \\n)
+export DISTRIBUTORNAME=$(echo -n "XXX" | base64 | tr -d \\n)
+export MAKE=$(echo -n "Cipla" | base64 | tr -d \\n)
+export DATEOFEXPIRY=$(echo -n "XXXXX" | base64 | tr -d \\n)
+export ORDERID=$(echo -n "XXX" | base64 | tr -d \\n)
+
+
+peer chaincode invoke -o localhost:7050 --ordererTLSHostnameOverride orderer.drug.com --tls --cafile $ORDERER_CA -C $CHANNEL_NAME -n drugchannel --peerAddresses localhost:7051 --tlsRootCertFiles $ORG1_PEER_TLSROOTCERT --peerAddresses localhost:9051 --tlsRootCertFiles $ORG2_PEER_TLSROOTCERT --peerAddresses localhost:11051 --tlsRootCertFiles $ORG3_PEER_TLSROOTCERT -c '{"Args":["OrderContract:CreateOrder","ORD201"]}' --transient "{\"make\":\"$MAKE\",\"model\":\"$MODEL\",\"color\":\"$COLOR\",\"distributorName\":\"$Distributor_NAME\"}"
+
+peer chaincode invoke -o localhost:7050 --ordererTLSHostnameOverride orderer.drug.com --tls --cafile $ORDERER_CA -C $CHANNEL_NAME -n drugchannel --peerAddresses localhost:7051 --tlsRootCertFiles $ORG1_PEER_TLSROOTCERT --peerAddresses localhost:9051 --tlsRootCertFiles $ORG2_PEER_TLSROOTCERT --peerAddresses localhost:11051 --tlsRootCertFiles $ORG3_PEER_TLSROOTCERT -c '{"Args":["OrderContract:CreateOrder","ORD201"]}' --transient "{\"make\":\"$MAKE\",\"dateofexpiry\":\"$DATEOFEXPIRY\",\"drugname\":\"$DRUGNAME\",\"distributorname\":\"$DISTRIBUTORNAME\"}"
+
+peer chaincode query -C $CHANNEL_NAME -n drugchannel -c '{"Args":["OrderContract:ReadOrder","ORD201"]}'
+
+
+--------- Stop the Automobile-network --------------
+
+############## host terminal ##############
+
+docker-compose -f docker/docker-compose-3org.yaml down
+
+docker-compose -f docker/docker-compose-ca.yaml down
+
+docker rm -f $(docker ps -a | awk '($2 ~ /dev-peer.*/) {print $1}')
+
+docker volume rm $(docker volume ls -q)
+
+sudo rm -rf organizations/
+
+sudo rm -rf channel-artifacts/
+
+sudo rm kbadrug.tar.gz
+
+docker ps -a
+
+// if there still exists the containers then execute the following commands.
+
+docker rm $(docker container ls -q) --force
+
+docker container prune
+
+docker system prune
+
+docker volume prune
+
+docker network prune
+
+///Run using startAutomobileNetwork.sh script
+
+//Build startAutomobileNetwork.sh script file
+
+chmod +x startAutomobileNetwork.sh
+
+./startAutomobileNetwork.sh
+
+//To submit transaction as ManufacturerMSP
+
+export CHANNEL_NAME=drugchannel
+export FABRIC_CFG_PATH=./peercfg
+export CORE_PEER_LOCALMSPID=ManufacturerMSP
+export CORE_PEER_TLS_ENABLED=true
+export CORE_PEER_TLS_ROOTCERT_FILE=${PWD}/organizations/peerOrganizations/manufacturer.drug.com/peers/peer0.manufacturer.drug.com/tls/ca.crt
+export CORE_PEER_MSPCONFIGPATH=${PWD}/organizations/peerOrganizations/manufacturer.drug.com/users/Admin@manufacturer.drug.com/msp
+export CORE_PEER_ADDRESS=localhost:7051
+export ORDERER_CA=${PWD}/organizations/ordererOrganizations/drug.com/orderers/orderer.drug.com/msp/tlscacerts/tlsca.drug.com-cert.pem
+export ORG1_PEER_TLSROOTCERT=${PWD}/organizations/peerOrganizations/manufacturer.drug.com/peers/peer0.manufacturer.drug.com/tls/ca.crt
+export ORG2_PEER_TLSROOTCERT=${PWD}/organizations/peerOrganizations/distributor.drug.com/peers/peer0.distributor.drug.com/tls/ca.crt
+export ORG3_PEER_TLSROOTCERT=${PWD}/organizations/peerOrganizations/pharmacist.drug.com/peers/peer0.pharmacist.drug.com/tls/ca.crt
+
+peer chaincode invoke -o localhost:7050 --ordererTLSHostnameOverride orderer.drug.com --tls --cafile $ORDERER_CA -C $CHANNEL_NAME -n drugchannel --peerAddresses localhost:7051 --tlsRootCertFiles $ORG1_PEER_TLSROOTCERT --peerAddresses localhost:9051 --tlsRootCertFiles $ORG2_PEER_TLSROOTCERT --peerAddresses localhost:11051 --tlsRootCertFiles $ORG3_PEER_TLSROOTCERT -c '{"function":"CreateDrug","Args":["Drug-101", "Tata", "Nexon", "White", "Factory-1", "22/07/2023"]}'
+
+peer chaincode query -C $CHANNEL_NAME -n drugchannel -c '{"Args":["GetAllDrugs"]}'
+
+//To stop the network using script file
+
+//Build stopAutomobileNetwork.sh script file
+
+chmod +x stopAutomobileNetwork.sh
+
+./stopAutomobileNetwork.sh
+
